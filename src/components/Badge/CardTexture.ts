@@ -53,36 +53,36 @@ export function createCardTexture({ name, title }: CardTextureProps): Promise<TH
     ctx.closePath()
     ctx.fill()
 
-    // 2. Giant Vertical Text on the Right (Relative X = 330)
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.07)'
-    ctx.font = '900 110px Inter, sans-serif'
-    ctx.textAlign = 'center'
-    const verticalText = ['R', 'O', 'B', 'O', 'T']
-    const startX = frontOffset + 340
-    const startY = 250
-    const spacing = 110
-    verticalText.forEach((char, index) => {
-      ctx.fillText(char, startX, startY + index * spacing)
-    })
+    // // 2. Giant Vertical Text on the Right (Relative X = 330)
+    // ctx.fillStyle = 'rgba(255, 255, 255, 0.07)'
+    // ctx.font = '900 110px Inter, sans-serif'
+    // ctx.textAlign = 'center'
+    // const verticalText = ['R', 'O', 'B', 'O', 'T']
+    // const startX = frontOffset + 340
+    // const startY = 250
+    // const spacing = 110
+    // verticalText.forEach((char, index) => {
+    //   ctx.fillText(char, startX, startY + index * spacing)
+    // })
 
-    // Reset alignment
-    ctx.textAlign = 'left'
+    // // Reset alignment
+    // ctx.textAlign = 'left'
 
     // 3. Bottom-Left Details (Relative X = 70)
     // Name
-    ctx.fillStyle = '#FFFFFF'
-    ctx.font = '900 56px Inter, sans-serif'
-    ctx.fillText(name.toUpperCase(), frontOffset + 70, 600)
+    ctx.fillStyle = '#CCFF00'  //'#FFFFFF'
+    ctx.font = '900 50px Inter, sans-serif'
+    ctx.fillText(name.toUpperCase(), frontOffset + 20, 600)
 
     // Title
-    ctx.fillStyle = '#888888'
-    ctx.font = 'bold 20px JetBrains Mono, monospace'
-    ctx.fillText(title.toUpperCase(), frontOffset + 70, 650)
+    ctx.fillStyle = '#FFFFFF'  //'#888888'
+    ctx.font = 'bold 25px JetBrains Mono, monospace'
+    ctx.fillText(title.toUpperCase(), frontOffset + 130, 650)
 
     // System Status tag
-    ctx.fillStyle = '#CCFF00'
-    ctx.font = 'bold 12px JetBrains Mono, monospace'
-    ctx.fillText('STATUS: ACTIVE // PERCEPTION_NODE_01', frontOffset + 70, 690)
+    // ctx.fillStyle = '#CCFF00'
+    // ctx.font = 'bold 12px JetBrains Mono, monospace'
+    // ctx.fillText('STATUS: ACTIVE // PERCEPTION_NODE_01', frontOffset + 70, 690)
 
     // 4. Bottom-Right White Asset Block (Relative X = 320)
     // ctx.fillStyle = '#FFFFFF'

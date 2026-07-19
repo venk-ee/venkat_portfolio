@@ -32,12 +32,12 @@ export default function InfoPanel(){
             </div>
 
             {/* Interaction Hint (Responsive states) */}
-          <div className="pt-8 text-xs font-mono text-text-muted/60 animate-pulse hidden md:block">
+          {/* <div className="pt-8 text-xs font-mono text-text-muted/60 animate-pulse hidden md:block">
             &lt; Drag the ID card on the right to interact &gt;
           </div>
           <div className="pt-8 text-xs font-mono text-text-muted/60 animate-pulse block md:hidden">
             &lt; Scroll down to interact with the ID card &gt;
-          </div>
+          </div> */}
         </div>
     )
 }
