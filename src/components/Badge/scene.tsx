@@ -1,7 +1,7 @@
 import { Physics } from "@react-three/rapier";
 import { Suspense } from "react";
 import Band from "./band";
-import { Environment } from "@react-three/drei";
+import { Environment, Lightformer } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 
 
@@ -13,15 +13,7 @@ export default function BridgeScene(){
             dpr={[1,1.5]}
             gl={{antialias:true ,alpha:true}}
             >
-                <ambientLight intensity={0.6} />
-
-                <spotLight position={[10,15,10]}
-                 angle={0.2} 
-                 penumbra={1} 
-                 intensity={3} 
-                 castShadow />
-
-                 <directionalLight position={[-10,-10,-5]} intensity={1} />
+                <ambientLight intensity={Math.PI} />
 
                  <Suspense fallback={null}>
 
@@ -34,9 +26,14 @@ export default function BridgeScene(){
                  </Suspense>
 
 
-
-            <Environment preset="city"/>
-                
+            <Environment background blur={0.75}>
+              <color attach="background" args={['#0a0a0a']} />
+              <Lightformer intensity={2} color="white" position={[0, -1, 5]} rotation={[0, 0, Math.PI / 3]} scale={[100, 0.1, 1]} />
+              <Lightformer intensity={3} color="white" position={[-1, -1, 1]} rotation={[0, 0, Math.PI / 3]} scale={[100, 0.1, 1]} />
+              <Lightformer intensity={3} color="white" position={[1, 1, 1]} rotation={[0, 0, Math.PI / 3]} scale={[100, 0.1, 1]} />
+              <Lightformer intensity={10} color="white" position={[-10, 0, 14]} rotation={[0, Math.PI / 2, Math.PI / 3]} scale={[100, 10, 1]} />
+            </Environment>
+            
             </Canvas>
         </div>
 
