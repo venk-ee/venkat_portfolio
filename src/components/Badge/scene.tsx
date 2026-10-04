@@ -18,10 +18,7 @@ export default function BridgeScene(){
                  <Suspense fallback={null}>
 
                     <Physics gravity={[0,-40,0]} timeStep={1/60}>
-                        <Band name="VENKATANATHA AV" title="AI & ML Engineer">
-
-                        </Band>
-
+                        <Band name="VENKATANATHA AV" title="AI & ML Engineer" photoUrl="/me.png" />
                     </Physics>
                  </Suspense>
 

@@ -11,24 +11,25 @@ interface CardProps {
   onPointerUp: (e: any) => void
 }
 
-  // Preload local GLB card model
+// Preload card model
 useGLTF.preload('/tag.glb')
 
 export default function Card({
   name,
   title,
+  photoUrl,
   onPointerDown,
   onPointerUp
 }: CardProps) {
   const [texture, setTexture] = useState<THREE.CanvasTexture | null>(null)
   
-  // Load local vertical tag geometry
+  // Tag geometry from model
   const { nodes, materials } = useGLTF('/tag.glb') as any
 
   useEffect(() => {
     let active = true
 
-    createCardTexture({ name, title }).then((tex) => {
+    createCardTexture({ name, title, photoUrl }).then((tex) => {
       if (active) {
         tex.flipY = false
         tex.wrapS = THREE.RepeatWrapping
@@ -40,11 +41,10 @@ export default function Card({
     })
 
     return () => {
-      
       active = false
       if (texture) texture.dispose()
     }
-  }, [name, title])
+  }, [name, title, photoUrl])
 
   if (!texture) return null
 
@@ -56,8 +56,8 @@ export default function Card({
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
     >
-      {/* Portrait card mesh geometry mapped with our texture */}
-      <mesh geometry={nodes.card.geometry}>
+      {/* Card mesh */}
+      <mesh geometry={nodes.card.geometry} renderOrder={2}>
         <meshPhysicalMaterial 
           map={texture} 
           map-anisotropy={16} 
@@ -68,11 +68,11 @@ export default function Card({
         />
       </mesh>
 
-      {/* Realistic metal clip at the top of the card */}
-      <mesh geometry={nodes.clip.geometry} material={materials.metal} material-roughness={0.3} />
+      {/* Clip ring */}
+      <mesh geometry={nodes.clip.geometry} material={materials.metal} material-roughness={0.3} renderOrder={3} />
       
-      {/* Metal clamp holding the rope */}
-      <mesh geometry={nodes.clamp.geometry} material={materials.metal} />
+      {/* Clamp collar */}
+      <mesh geometry={nodes.clamp.geometry} material={materials.metal} renderOrder={3} />
     </group>
   )
 }

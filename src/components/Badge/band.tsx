@@ -3,9 +3,12 @@ import { useEffect, useRef, useState } from 'react'
 import { extend, useThree, useFrame } from '@react-three/fiber'
 import { RigidBody, useRopeJoint, useSphericalJoint, BallCollider, CuboidCollider } from '@react-three/rapier'
 import { MeshLineGeometry, MeshLineMaterial } from 'meshline'
+import { useTexture } from '@react-three/drei'
 import Card from './card'
 
 extend({ MeshLineGeometry, MeshLineMaterial })
+
+useTexture.preload('/band.png')
 
 declare module '@react-three/fiber' {
   interface ThreeElements {
@@ -25,10 +28,15 @@ interface BandProps {
 export default function Band({
   name,
   title,
+  photoUrl,
   maxSpeed = 50,
   minSpeed = 10
 }: BandProps) {
-  // Refs for physics bodies
+  // Strap texture
+  const bandTexture = useTexture('/band.png')
+  bandTexture.wrapS = bandTexture.wrapT = THREE.RepeatWrapping
+
+  // Physics refs
   const band = useRef<any>(null)
   const fixed = useRef<any>(null)
   const j1 = useRef<any>(null)
@@ -36,7 +44,7 @@ export default function Band({
   const j3 = useRef<any>(null)
   const card = useRef<any>(null)
 
-  // Vector caches to prevent garbage collector overhead in the 60fps loop
+  // Scratch vectors for the animation loop
   const vec = useRef(new THREE.Vector3())
   const ang = useRef(new THREE.Vector3())
   const rot = useRef(new THREE.Vector3())
@@ -51,23 +59,25 @@ export default function Band({
   }
 
   const { width, height } = useThree((state) => state.size)
+
+  // Spline points for the strap
   const [curve] = useState(() => new THREE.CatmullRomCurve3([
     new THREE.Vector3(),
     new THREE.Vector3(),
     new THREE.Vector3(),
-    new THREE.Vector3()
+    new THREE.Vector3(),
   ]))
 
   const [dragged, drag] = useState<THREE.Vector3 | false>(false)
   const [hovered, hover] = useState(false)
 
-  // 1. Setup physics joints (matching ref names fixed, j1, j2, j3, card)
+  // Joints between links
   useRopeJoint(fixed, j1, [[0, 0, 0], [0, 0, 0], 1])
   useRopeJoint(j1, j2, [[0, 0, 0], [0, 0, 0], 1])
   useRopeJoint(j2, j3, [[0, 0, 0], [0, 0, 0], 1])
   useSphericalJoint(j3, card, [[0, 0, 0], [0, 1.45, 0]])
 
-  // Grab cursors
+  // Cursor state
   useEffect(() => {
     if (hovered) {
       document.body.style.cursor = dragged ? 'grabbing' : 'grab'
@@ -77,7 +87,10 @@ export default function Band({
     }
   }, [hovered, dragged])
 
-  // 2. Physics & rendering loop
+  // Taper strap width near the card joint
+  const widthCallback = (p: number) => (p < 0.06 ? p / 0.06 : 1)
+
+  // Animation and physics update
   useFrame((state, delta) => {
     if (
       !fixed.current ||
@@ -87,7 +100,7 @@ export default function Band({
       !card.current
     ) return
 
-    // Drag math using unprojection to follow mouse cursor pixel-perfectly
+    // Track pointer while dragging
     if (dragged) {
       vec.current.set(state.pointer.x, state.pointer.y, 0.5).unproject(state.camera)
       dir.current.copy(vec.current).sub(state.camera.position).normalize()
@@ -102,29 +115,24 @@ export default function Band({
       })
     }
 
-    // Drawing curve and stabilizing card angle
+    // Smooth intermediate links
     ;[j1, j2].forEach((ref) => {
-      if (!ref.current.lerped) {
-        ref.current.lerped = new THREE.Vector3().copy(ref.current.translation())
-      }
+      if (!ref.current.lerped) ref.current.lerped = new THREE.Vector3().copy(ref.current.translation())
       const clampedDistance = Math.max(0.1, Math.min(1, ref.current.lerped.distanceTo(ref.current.translation())))
-      ref.current.lerped.lerp(
-        ref.current.translation(),
-        delta * (minSpeed + clampedDistance * (maxSpeed - minSpeed))
-      )
+      ref.current.lerped.lerp(ref.current.translation(), delta * (minSpeed + clampedDistance * (maxSpeed - minSpeed)))
     })
 
-    // Curve positions for lanyard line
+    // Update curve points along the chain
     curve.points[0].copy(j3.current.translation())
     curve.points[1].copy(j2.current.lerped)
     curve.points[2].copy(j1.current.lerped)
     curve.points[3].copy(fixed.current.translation())
 
     if (band.current) {
-      band.current.geometry.setPoints(curve.getPoints(32))
+      band.current.geometry.setPoints(curve.getPoints(32), widthCallback)
     }
 
-    // Auto-facing stabilization (torque)
+    // Damp card spin
     ang.current.copy(card.current.angvel())
     rot.current.copy(card.current.rotation())
     card.current.setAngvel({
@@ -139,10 +147,10 @@ export default function Band({
   return (
     <>
       <group position={[0, 4, 0]}>
-        {/* Fixed Anchor */}
+        {/* Fixed mount */}
         <RigidBody ref={fixed} {...segmentProps} type="fixed" />
 
-        {/* Chain nodes */}
+        {/* Chain links */}
         <RigidBody position={[0.5, 0, 0]} ref={j1} {...segmentProps}>
           <BallCollider args={[0.1]} />
         </RigidBody>
@@ -153,7 +161,7 @@ export default function Band({
           <BallCollider args={[0.1]} />
         </RigidBody>
 
-        {/* Card Body */}
+        {/* Card */}
         <RigidBody
           position={[2, 0, 0]}
           ref={card}
@@ -184,6 +192,7 @@ export default function Band({
             <Card
               name={name}
               title={title}
+              photoUrl={photoUrl}
               onPointerDown={() => {}}
               onPointerUp={() => {}}
             />
@@ -191,14 +200,16 @@ export default function Band({
         </RigidBody>
       </group>
 
-      {/* Lanyard Line - Render solid matte black line (No Vercel printed strap pattern) */}
+      {/* Strap mesh */}
       <mesh ref={band}>
         <meshLineGeometry />
         <meshLineMaterial
-          color="#151515" // Solid matte black/charcoal
           depthTest={false}
           resolution={[width, height]}
-          lineWidth={0.06} // Thinner elegant line
+          useMap={1}
+          map={bandTexture}
+          repeat={new THREE.Vector2(-3, 1)}
+          lineWidth={1}
         />
       </mesh>
     </>
