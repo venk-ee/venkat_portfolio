@@ -43,6 +43,9 @@ export default function Band({
   const j2 = useRef<any>(null)
   const j3 = useRef<any>(null)
   const card = useRef<any>(null)
+  const wallL = useRef<any>(null)
+  const wallR = useRef<any>(null)
+  const wallF = useRef<any>(null)
 
   // Scratch vectors for the animation loop
   const vec = useRef(new THREE.Vector3())
@@ -58,13 +61,47 @@ export default function Band({
     linearDamping: 3
   }
 
-  // world size
+  // world size (live — used only for drag limits, never for physics placement)
   const viewport = useThree((state) => state.viewport)
   const halfW = viewport.width / 2
   const halfH = viewport.height / 2
 
-  const MOUNT_X = Math.min(4.4, halfW - 1.7)
-  const MOUNT_Y = 4.6
+  // Frozen start spot (right side). The group itself never moves after mount —
+  // on resize we teleport the bodies instead, so meshes and physics stay in sync.
+  const [rig] = useState(() => {
+    const hw = viewport.width / 2
+    return {
+      mountX: Math.min(4.4, hw - 1.7),
+      mountY: 4.6,
+      halfW0: hw,
+      halfH0: viewport.height / 2,
+    }
+  })
+  const MOUNT_X = rig.mountX
+  const MOUNT_Y = rig.mountY
+  const mountXLive = useRef(rig.mountX)
+
+  // Dynamic resize: slide the whole rig (chain + walls) to the new right-side
+  // spot by teleporting bodies — never by moving the parent group.
+  // On narrow screens this tucks the badge behind the text instead of clipping.
+  useEffect(() => {
+    const newMountX = Math.min(4.4, halfW - 1.7)
+    const dx = newMountX - mountXLive.current
+    if (Math.abs(dx) < 0.01) return
+    mountXLive.current = newMountX
+    ;[fixed, j1, j2, j3, card].forEach((ref) => {
+      const b = ref.current
+      if (!b) return
+      const t = b.translation()
+      b.setTranslation({ x: t.x + dx, y: t.y, z: t.z }, true)
+    })
+    const placeWall = (ref: any, x: number, y: number) => {
+      if (ref.current) ref.current.setTranslation({ x, y, z: 0 }, true)
+    }
+    placeWall(wallL, -halfW + 0.5, MOUNT_Y - 2)
+    placeWall(wallR, halfW - 0.5, MOUNT_Y - 2)
+    placeWall(wallF, newMountX, -halfH + 1.15)
+  }, [viewport.width])
 
   const { width, height } = useThree((state) => state.size)
 
@@ -122,7 +159,6 @@ export default function Band({
 
       ;[card, j1, j2, j3, fixed].forEach((ref) => ref.current?.wakeUp())
 
-      // Clamp drag target to the visible frame — roams the full hero, never leaves it
       const targetX = Math.min(halfW - 0.9, Math.max(-halfW + 0.9, vec.current.x - dragged.x))
       const targetY = Math.min(halfH - 1, Math.max(-halfH + 1.6, vec.current.y - dragged.y))
       card.current.setNextKinematicTranslation({
@@ -139,7 +175,6 @@ export default function Band({
       ref.current.lerped.lerp(ref.current.translation(), delta * (minSpeed + clampedDistance * (maxSpeed - minSpeed)))
     })
 
-    // Update curve points along the chain, starting inside the card clip ring
     const cardQuat = card.current.rotation()
     clipQuat.current.set(cardQuat.x, cardQuat.y, cardQuat.z, cardQuat.w)
     clipPos.current.copy(CLIP_OFFSET.current).applyQuaternion(clipQuat.current).add(card.current.translation())
@@ -167,20 +202,19 @@ export default function Band({
 
   return (
     <>
-      {/* Rest position: right side, same spot as before. */}
+      {/* Rest position */}
       <group position={[MOUNT_X, MOUNT_Y, 0]}>
         {/* Fixed mount */}
         <RigidBody ref={fixed} {...segmentProps} type="fixed" />
 
-        {/* Invisible boundary walls at the hero edges */}
-        <RigidBody position={[(-halfW + 0.5) - MOUNT_X, -2, 0]} type="fixed" colliders={false}>
+        <RigidBody ref={wallL} position={[(-rig.halfW0 + 0.5) - MOUNT_X, -2, 0]} type="fixed" colliders={false}>
           <CuboidCollider args={[0.2, 8, 2]} />
         </RigidBody>
-        <RigidBody position={[(halfW - 0.5) - MOUNT_X, -2, 0]} type="fixed" colliders={false}>
+        <RigidBody ref={wallR} position={[(rig.halfW0 - 0.5) - MOUNT_X, -2, 0]} type="fixed" colliders={false}>
           <CuboidCollider args={[0.2, 8, 2]} />
         </RigidBody>
-        <RigidBody position={[0, (-halfH + 1.15) - MOUNT_Y, 0]} type="fixed" colliders={false}>
-          <CuboidCollider args={[halfW + 1, 0.2, 2]} />
+        <RigidBody ref={wallF} position={[0, (-rig.halfH0 + 1.15) - MOUNT_Y, 0]} type="fixed" colliders={false}>
+          <CuboidCollider args={[rig.halfW0 + 1, 0.2, 2]} />
         </RigidBody>
 
         {/* Chain links */}
