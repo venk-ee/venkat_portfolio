@@ -137,7 +137,7 @@ function drawFace(
   const cardRight = baseOffset + 470
   const textX = baseOffset + TEXT_PAD_X
 
-  ctx.fillStyle = '#0e0e0e'
+  ctx.fillStyle = '#1D1C1B'
   ctx.fillRect(cardLeft, CARD_TOP, cardRight - cardLeft, CARD_BOTTOM - CARD_TOP)
 
   drawFacets(ctx, baseOffset)
@@ -156,7 +156,7 @@ function drawFace(
   ctx.closePath()
   ctx.fill()
 
-  ctx.fillStyle = '#F5F5F7'
+  ctx.fillStyle = '#F4F3F3'
   ctx.beginPath()
   ctx.roundRect(cardLeft, WHITE_TOP, cardRight - cardLeft, CARD_BOTTOM - WHITE_TOP, [0, 0, 16, 16])
   ctx.fill()
@@ -184,7 +184,7 @@ export async function createCardTexture({ name, title, photoUrl }: CardTexturePr
   canvas.height = CANVAS_SIZE
   const ctx = canvas.getContext('2d')!
 
-  ctx.fillStyle = '#080808'
+  ctx.fillStyle = '#1D1C1B'
   ctx.fillRect(0, 0, canvas.width, canvas.height)
 
   const titleText = normalizeLine(title)
