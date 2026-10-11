@@ -1,27 +1,29 @@
-    import InfoPanel from './components/sections/Hero/InfoPanel'
-    import BadgeScene from './components/3d/Badge/scene'
+import Header from './components/layout/Header'
+import Footer from './components/layout/Footer'
+import InfoPanel from './components/sections/Hero/InfoPanel'
+import BadgeScene from './components/3d/Badge/scene'
 
-    function App() {
-      return (
-        <main className="min-h-screen bg-bg text-cream">
-          {/* Hero — warm black */}
-          <div className="flex flex-col md:flex-row min-h-screen w-full bg-bg">
-            <section className="flex-none w-full md:w-[40%] flex items-center justify-center p-8 md:p-16">
-              <InfoPanel />
-            </section>
-            <section className="flex-1 min-h-[450px] md:h-screen relative">
-              <BadgeScene /> 
-            </section>
+function App() {
+  return (
+    <main id="top" className="min-h-screen bg-bg text-cream">
+      <Header />
+
+      {/* Hero. */}
+      <div className="relative min-h-screen w-full overflow-hidden bg-bg">
+        <div className="absolute inset-0">
+          <BadgeScene />
+        </div>
+        <section className="pointer-events-none relative z-10 mx-auto flex min-h-screen max-w-6xl items-center px-8 md:px-16">
+          <div className="pointer-events-auto w-full max-w-lg py-24">
+            <InfoPanel />
           </div>
+          <div className="hidden flex-1 md:block" />
+        </section>
+      </div>
 
-          {/* Soft footer fade — cream to mint to lime */}
-          <section className="tl-fade relative z-10 -mt-10 rounded-t-[2.5rem]">
-            <div className="mx-auto flex min-h-[45vh] max-w-6xl flex-col items-center justify-end px-8 pb-10 pt-32 text-center">
-              <p className="font-mono text-sm text-ink/60">© 2026 Venkat. All rights reserved.</p>
-            </div>
-          </section>
-        </main>
-      )
-    }
+      <Footer />
+    </main>
+  )
+}
 
-    export default App
+export default App

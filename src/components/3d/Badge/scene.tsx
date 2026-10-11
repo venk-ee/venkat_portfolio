@@ -3,13 +3,14 @@ import { Suspense } from "react";
 import Band from "./band";
 import { Environment, Lightformer } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
+import { portfolio } from "../../../data/portfolio";
 
 
 export default function BridgeScene(){
     return(
-        <div className=" w-full h-full badge-container">
+        <div className="absolute inset-0 h-full w-full badge-container">
             <Canvas 
-            camera={{position:[0,0,13],fov:25}}
+            camera={{position:[0,0,15.5],fov:25}}
             dpr={[1,1.5]}
             gl={{antialias:true ,alpha:true}}
             >
@@ -18,7 +19,7 @@ export default function BridgeScene(){
                  <Suspense fallback={null}>
 
                     <Physics gravity={[0,-40,0]} timeStep={1/60}>
-                        <Band name="VENKATANATHA AV" title="AI & ML Engineer" photoUrl="/me.png" />
+                        <Band name={portfolio.badgeName} title={portfolio.badgeTitle} photoUrl={portfolio.photoUrl} />
                     </Physics>
                  </Suspense>
 

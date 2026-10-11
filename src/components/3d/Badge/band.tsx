@@ -54,19 +54,33 @@ export default function Band({
     type: 'dynamic' as const,
     canSleep: true,
     colliders: false as const,
-    angularDamping: 2,
-    linearDamping: 2
+    angularDamping: 3,
+    linearDamping: 3
   }
+
+  // world size
+  const viewport = useThree((state) => state.viewport)
+  const halfW = viewport.width / 2
+  const halfH = viewport.height / 2
+
+  const MOUNT_X = Math.min(4.4, halfW - 1.7)
+  const MOUNT_Y = 4.6
 
   const { width, height } = useThree((state) => state.size)
 
-  // Spline points for the strap
+  // Spline points for the strap: clip ring -> joints -> mount,
   const [curve] = useState(() => new THREE.CatmullRomCurve3([
     new THREE.Vector3(),
     new THREE.Vector3(),
     new THREE.Vector3(),
     new THREE.Vector3(),
+    new THREE.Vector3(),
   ]))
+
+  // Scratch objects for the strap-to-clip calculation
+  const clipPos = useRef(new THREE.Vector3())
+  const clipQuat = useRef(new THREE.Quaternion())
+  const CLIP_OFFSET = useRef(new THREE.Vector3(0, 1.45, 0))
 
   const [dragged, drag] = useState<THREE.Vector3 | false>(false)
   const [hovered, hover] = useState(false)
@@ -108,9 +122,12 @@ export default function Band({
 
       ;[card, j1, j2, j3, fixed].forEach((ref) => ref.current?.wakeUp())
 
+      // Clamp drag target to the visible frame — roams the full hero, never leaves it
+      const targetX = Math.min(halfW - 0.9, Math.max(-halfW + 0.9, vec.current.x - dragged.x))
+      const targetY = Math.min(halfH - 1, Math.max(-halfH + 1.6, vec.current.y - dragged.y))
       card.current.setNextKinematicTranslation({
-        x: vec.current.x - dragged.x,
-        y: vec.current.y - dragged.y,
+        x: targetX,
+        y: targetY,
         z: vec.current.z - dragged.z
       })
     }
@@ -122,11 +139,15 @@ export default function Band({
       ref.current.lerped.lerp(ref.current.translation(), delta * (minSpeed + clampedDistance * (maxSpeed - minSpeed)))
     })
 
-    // Update curve points along the chain
-    curve.points[0].copy(j3.current.translation())
-    curve.points[1].copy(j2.current.lerped)
-    curve.points[2].copy(j1.current.lerped)
-    curve.points[3].copy(fixed.current.translation())
+    // Update curve points along the chain, starting inside the card clip ring
+    const cardQuat = card.current.rotation()
+    clipQuat.current.set(cardQuat.x, cardQuat.y, cardQuat.z, cardQuat.w)
+    clipPos.current.copy(CLIP_OFFSET.current).applyQuaternion(clipQuat.current).add(card.current.translation())
+    curve.points[0].copy(clipPos.current)
+    curve.points[1].copy(j3.current.translation())
+    curve.points[2].copy(j2.current.lerped)
+    curve.points[3].copy(j1.current.lerped)
+    curve.points[4].copy(fixed.current.translation())
 
     if (band.current) {
       band.current.geometry.setPoints(curve.getPoints(32), widthCallback)
@@ -146,24 +167,36 @@ export default function Band({
 
   return (
     <>
-      <group position={[0, 4, 0]}>
+      {/* Rest position: right side, same spot as before. */}
+      <group position={[MOUNT_X, MOUNT_Y, 0]}>
         {/* Fixed mount */}
         <RigidBody ref={fixed} {...segmentProps} type="fixed" />
 
+        {/* Invisible boundary walls at the hero edges */}
+        <RigidBody position={[(-halfW + 0.5) - MOUNT_X, -2, 0]} type="fixed" colliders={false}>
+          <CuboidCollider args={[0.2, 8, 2]} />
+        </RigidBody>
+        <RigidBody position={[(halfW - 0.5) - MOUNT_X, -2, 0]} type="fixed" colliders={false}>
+          <CuboidCollider args={[0.2, 8, 2]} />
+        </RigidBody>
+        <RigidBody position={[0, (-halfH + 1.15) - MOUNT_Y, 0]} type="fixed" colliders={false}>
+          <CuboidCollider args={[halfW + 1, 0.2, 2]} />
+        </RigidBody>
+
         {/* Chain links */}
-        <RigidBody position={[0.5, 0, 0]} ref={j1} {...segmentProps}>
+        <RigidBody position={[0, -1, 0]} ref={j1} {...segmentProps}>
           <BallCollider args={[0.1]} />
         </RigidBody>
-        <RigidBody position={[1, 0, 0]} ref={j2} {...segmentProps}>
+        <RigidBody position={[0, -2, 0]} ref={j2} {...segmentProps}>
           <BallCollider args={[0.1]} />
         </RigidBody>
-        <RigidBody position={[1.5, 0, 0]} ref={j3} {...segmentProps}>
+        <RigidBody position={[0, -3, 0]} ref={j3} {...segmentProps}>
           <BallCollider args={[0.1]} />
         </RigidBody>
 
         {/* Card */}
         <RigidBody
-          position={[2, 0, 0]}
+          position={[0, -4.45, 0]}
           ref={card}
           {...segmentProps}
           type={dragged ? 'kinematicPosition' : 'dynamic'}
