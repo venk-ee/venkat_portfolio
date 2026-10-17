@@ -10,6 +10,12 @@ extend({ MeshLineGeometry, MeshLineMaterial })
 
 useTexture.preload('/band.png')
 
+// Mobile tuning: on narrow screens the tag rests a bit higher, clear of the
+// hero text. World units — physics untouched, just a different rest spot.
+const MOBILE_LIFT = 1.8
+// Canvas width (CSS px) below which the layout counts as mobile (md: breakpoint).
+const MOBILE_MAX_WIDTH = 768
+
 declare module '@react-three/fiber' {
   interface ThreeElements {
     meshLineGeometry: any
@@ -66,13 +72,20 @@ export default function Band({
   const halfW = viewport.width / 2
   const halfH = viewport.height / 2
 
+  // Canvas size in CSS pixels (mobile check + strap resolution)
+  const { width, height } = useThree((state) => state.size)
+
+  // Phones get a lifted rest spot; everything else keeps the original one.
+  const isMobile = width < MOBILE_MAX_WIDTH
+  const mobileLift = useRef(isMobile ? MOBILE_LIFT : 0)
+
   // Frozen start spot (right side). The group itself never moves after mount —
   // on resize we teleport the bodies instead, so meshes and physics stay in sync.
   const [rig] = useState(() => {
     const hw = viewport.width / 2
     return {
       mountX: Math.min(4.4, hw - 1.7),
-      mountY: 4.6,
+      mountY: 4.6 + mobileLift.current,
       halfW0: hw,
       halfH0: viewport.height / 2,
     }
@@ -80,30 +93,34 @@ export default function Band({
   const MOUNT_X = rig.mountX
   const MOUNT_Y = rig.mountY
   const mountXLive = useRef(rig.mountX)
+  const mountYLive = useRef(rig.mountY)
 
-  // Dynamic resize: slide the whole rig (chain + walls) to the new right-side
-  // spot by teleporting bodies — never by moving the parent group.
-  // On narrow screens this tucks the badge behind the text instead of clipping.
+  // Dynamic resize: slide the whole rig (chain + walls) to its new spot by
+  // teleporting bodies — never by moving the parent group.
+  // X follows the right-side mount; on narrow screens Y also lifts the tag a
+  // bit higher so it stays clear of the hero text. The swing feel is untouched.
   useEffect(() => {
     const newMountX = Math.min(4.4, halfW - 1.7)
     const dx = newMountX - mountXLive.current
-    if (Math.abs(dx) < 0.01) return
+    const newLift = width < MOBILE_MAX_WIDTH ? MOBILE_LIFT : 0
+    const dy = newLift - mobileLift.current
+    if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) return
     mountXLive.current = newMountX
+    mountYLive.current += dy
+    mobileLift.current = newLift
     ;[fixed, j1, j2, j3, card].forEach((ref) => {
       const b = ref.current
       if (!b) return
       const t = b.translation()
-      b.setTranslation({ x: t.x + dx, y: t.y, z: t.z }, true)
+      b.setTranslation({ x: t.x + dx, y: t.y + dy, z: t.z }, true)
     })
     const placeWall = (ref: any, x: number, y: number) => {
       if (ref.current) ref.current.setTranslation({ x, y, z: 0 }, true)
     }
-    placeWall(wallL, -halfW + 0.5, MOUNT_Y - 2)
-    placeWall(wallR, halfW - 0.5, MOUNT_Y - 2)
+    placeWall(wallL, -halfW + 0.5, mountYLive.current - 2)
+    placeWall(wallR, halfW - 0.5, mountYLive.current - 2)
     placeWall(wallF, newMountX, -halfH + 1.15)
-  }, [viewport.width])
-
-  const { width, height } = useThree((state) => state.size)
+  }, [halfH, halfW, viewport.width, width])
 
   // Spline points for the strap: clip ring -> joints -> mount,
   const [curve] = useState(() => new THREE.CatmullRomCurve3([

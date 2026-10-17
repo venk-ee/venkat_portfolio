@@ -23,9 +23,9 @@ export interface Portfolio {
 }
 
 export const portfolio: Portfolio = {
-  name: "Venkat",
-  role: "Software Engineer",
-  bio: "Building intelligent machines that see, think, and interact with the physical world. Specializing in computer vision, robotic perception, and real-time 3D systems.",
+  name: "Venkatanatha av",
+  role: "AI & ML Engineer",
+  bio: "",
   badgeName: "VENKATANATHA AV",
   badgeTitle: "AI & ML Engineer",
   photoUrl: "/me.png",

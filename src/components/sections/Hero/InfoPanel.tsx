@@ -9,7 +9,7 @@ return(
     <div id="about" className="flex flex-col justify-center h-full max-w-lg space-y-6 text-left">
         <div className="w-12 h-1 bg-accent rounded"></div>
         <div>
-            <h1 className="text-5xl font-black tracking-tight text-cream md:text-6xl font-sans">{portfolio.name}</h1>
+            <h1 className="text-4xl font-black tracking-tight text-cream md:text-6xl font-sans">{portfolio.name}</h1>
             <p className="text-lg text-cream/70 mt-2">{portfolio.role}</p>
         </div>
         <p className="text-cream/60 leading-relaxed text-base font-sans">
