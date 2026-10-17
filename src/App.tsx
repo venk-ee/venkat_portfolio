@@ -1,6 +1,7 @@
 import Header from './components/layout/Header'
 import Footer from './components/layout/Footer'
 import InfoPanel from './components/sections/Hero/InfoPanel'
+import Experience from './components/sections/Experience/Experience'
 import BadgeScene from './components/3d/Badge/scene'
 
 function App() {
@@ -21,6 +22,8 @@ function App() {
           <div className="hidden flex-1 md:block" />
         </section>
       </div>
+
+      <Experience />
 
       <Footer />
     </main>

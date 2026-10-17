@@ -34,6 +34,7 @@ export const portfolio: Portfolio = {
   nav: [
     { label: "Home", href: "#top" },
     { label: "About", href: "#about" },
+    { label: "Experience", href: "#experience" },
     { label: "Contact", href: "#contact" },
   ],
 
