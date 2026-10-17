@@ -1,13 +1,13 @@
 
 
 export interface NavLink {
-  label: string; // text shown, "
-  href: string; // link target,  "https://..."
+  label: string; // button text
+  href: string; // "https://..." or "#id"
 }
 
 export interface SocialLink {
-  label: string;
-  href: string;
+  label: string; // button text
+  href: string; // "https://..."
 }
 
 export interface Portfolio {

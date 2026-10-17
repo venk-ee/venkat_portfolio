@@ -10,11 +10,10 @@ extend({ MeshLineGeometry, MeshLineMaterial })
 
 useTexture.preload('/band.png')
 
-// Mobile tuning: on narrow screens the tag rests a bit higher, clear of the
-// hero text. World units — physics untouched, just a different rest spot.
+// The tag hangs higher on narrow screens so it stays off the hero text.
+// Same physics everywhere — this only moves the anchor point.
 const MOBILE_LIFT = 1.8
-// Canvas width (CSS px) below which the layout counts as mobile (md: breakpoint).
-const MOBILE_MAX_WIDTH = 768
+const MOBILE_MAX_WIDTH = 768 // matches the md: breakpoint
 
 declare module '@react-three/fiber' {
   interface ThreeElements {
@@ -38,11 +37,9 @@ export default function Band({
   maxSpeed = 50,
   minSpeed = 10
 }: BandProps) {
-  // Strap texture
   const bandTexture = useTexture('/band.png')
   bandTexture.wrapS = bandTexture.wrapT = THREE.RepeatWrapping
 
-  // Physics refs
   const band = useRef<any>(null)
   const fixed = useRef<any>(null)
   const j1 = useRef<any>(null)
@@ -53,7 +50,7 @@ export default function Band({
   const wallR = useRef<any>(null)
   const wallF = useRef<any>(null)
 
-  // Scratch vectors for the animation loop
+  // Reused every frame — nothing gets allocated in the render loop.
   const vec = useRef(new THREE.Vector3())
   const ang = useRef(new THREE.Vector3())
   const rot = useRef(new THREE.Vector3())
@@ -67,20 +64,19 @@ export default function Band({
     linearDamping: 3
   }
 
-  // world size (live — used only for drag limits, never for physics placement)
+  // Viewport in world units, for the drag limits and screen-edge walls.
   const viewport = useThree((state) => state.viewport)
   const halfW = viewport.width / 2
   const halfH = viewport.height / 2
 
-  // Canvas size in CSS pixels (mobile check + strap resolution)
+  // Canvas size in CSS pixels.
   const { width, height } = useThree((state) => state.size)
 
-  // Phones get a lifted rest spot; everything else keeps the original one.
   const isMobile = width < MOBILE_MAX_WIDTH
   const mobileLift = useRef(isMobile ? MOBILE_LIFT : 0)
 
-  // Frozen start spot (right side). The group itself never moves after mount —
-  // on resize we teleport the bodies instead, so meshes and physics stay in sync.
+  // Where the rig starts. The group never moves after mount — on resize we
+  // teleport the bodies instead, so meshes and physics stay in sync.
   const [rig] = useState(() => {
     const hw = viewport.width / 2
     return {
@@ -95,10 +91,8 @@ export default function Band({
   const mountXLive = useRef(rig.mountX)
   const mountYLive = useRef(rig.mountY)
 
-  // Dynamic resize: slide the whole rig (chain + walls) to its new spot by
-  // teleporting bodies — never by moving the parent group.
-  // X follows the right-side mount; on narrow screens Y also lifts the tag a
-  // bit higher so it stays clear of the hero text. The swing feel is untouched.
+  // Resize teleports the rig to its new spot (sideways, plus the mobile lift).
+  // Same offset for every body, so the joints stay intact.
   useEffect(() => {
     const newMountX = Math.min(4.4, halfW - 1.7)
     const dx = newMountX - mountXLive.current
@@ -122,7 +116,7 @@ export default function Band({
     placeWall(wallF, newMountX, -halfH + 1.15)
   }, [halfH, halfW, viewport.width, width])
 
-  // Spline points for the strap: clip ring -> joints -> mount,
+  // Strap curve: clip ring -> joints -> mount.
   const [curve] = useState(() => new THREE.CatmullRomCurve3([
     new THREE.Vector3(),
     new THREE.Vector3(),
@@ -131,7 +125,7 @@ export default function Band({
     new THREE.Vector3(),
   ]))
 
-  // Scratch objects for the strap-to-clip calculation
+  // Where the strap meets the metal clip, above the card body.
   const clipPos = useRef(new THREE.Vector3())
   const clipQuat = useRef(new THREE.Quaternion())
   const CLIP_OFFSET = useRef(new THREE.Vector3(0, 1.45, 0))
@@ -139,13 +133,11 @@ export default function Band({
   const [dragged, drag] = useState<THREE.Vector3 | false>(false)
   const [hovered, hover] = useState(false)
 
-  // Joints between links
   useRopeJoint(fixed, j1, [[0, 0, 0], [0, 0, 0], 1])
   useRopeJoint(j1, j2, [[0, 0, 0], [0, 0, 0], 1])
   useRopeJoint(j2, j3, [[0, 0, 0], [0, 0, 0], 1])
   useSphericalJoint(j3, card, [[0, 0, 0], [0, 1.45, 0]])
 
-  // Cursor state
   useEffect(() => {
     if (hovered) {
       document.body.style.cursor = dragged ? 'grabbing' : 'grab'
@@ -155,10 +147,9 @@ export default function Band({
     }
   }, [hovered, dragged])
 
-  // Taper strap width near the card joint
+  // Strap thins out just before it meets the card.
   const widthCallback = (p: number) => (p < 0.06 ? p / 0.06 : 1)
 
-  // Animation and physics update
   useFrame((state, delta) => {
     if (
       !fixed.current ||
@@ -168,7 +159,6 @@ export default function Band({
       !card.current
     ) return
 
-    // Track pointer while dragging
     if (dragged) {
       vec.current.set(state.pointer.x, state.pointer.y, 0.5).unproject(state.camera)
       dir.current.copy(vec.current).sub(state.camera.position).normalize()
@@ -185,7 +175,8 @@ export default function Band({
       })
     }
 
-    // Smooth intermediate links
+    // The links chase their real positions with a bit of lag, so the strap
+    // flows instead of snapping.
     ;[j1, j2].forEach((ref) => {
       if (!ref.current.lerped) ref.current.lerped = new THREE.Vector3().copy(ref.current.translation())
       const clampedDistance = Math.max(0.1, Math.min(1, ref.current.lerped.distanceTo(ref.current.translation())))
@@ -205,13 +196,20 @@ export default function Band({
       band.current.geometry.setPoints(curve.getPoints(32), widthCallback)
     }
 
-    // Damp card spin
+    // Spin damping, plus a soft nudge so the pendulum never fully settles.
+    // Skipped while dragging — the pointer is in charge there.
     ang.current.copy(card.current.angvel())
     rot.current.copy(card.current.rotation())
+    const t = state.clock.elapsedTime
+    // Two out-of-sync waves so it never looks mechanical. Hand-tuned: raise
+    // the amplitudes for a bigger sway; slowing the waves sways even further.
+    const idleSway = dragged
+      ? 0
+      : Math.sin(t * 0.6) * 0.05 + Math.sin(t * 0.93 + 1.7) * 0.018
     card.current.setAngvel({
       x: ang.current.x,
       y: ang.current.y - rot.current.y * 0.25,
-      z: ang.current.z
+      z: ang.current.z + idleSway
     })
   })
 
@@ -219,11 +217,10 @@ export default function Band({
 
   return (
     <>
-      {/* Rest position */}
       <group position={[MOUNT_X, MOUNT_Y, 0]}>
-        {/* Fixed mount */}
         <RigidBody ref={fixed} {...segmentProps} type="fixed" />
 
+        {/* Invisible walls that keep the tag inside the screen. */}
         <RigidBody ref={wallL} position={[(-rig.halfW0 + 0.5) - MOUNT_X, -2, 0]} type="fixed" colliders={false}>
           <CuboidCollider args={[0.2, 8, 2]} />
         </RigidBody>
@@ -234,7 +231,6 @@ export default function Band({
           <CuboidCollider args={[rig.halfW0 + 1, 0.2, 2]} />
         </RigidBody>
 
-        {/* Chain links */}
         <RigidBody position={[0, -1, 0]} ref={j1} {...segmentProps}>
           <BallCollider args={[0.1]} />
         </RigidBody>
@@ -245,11 +241,12 @@ export default function Band({
           <BallCollider args={[0.1]} />
         </RigidBody>
 
-        {/* Card */}
+        {/* canSleep stays off — otherwise Rapier dozes and kills the sway. */}
         <RigidBody
           position={[0, -4.45, 0]}
           ref={card}
           {...segmentProps}
+          canSleep={false}
           type={dragged ? 'kinematicPosition' : 'dynamic'}
         >
           <CuboidCollider args={[0.8, 1.125, 0.01]} />
@@ -284,7 +281,6 @@ export default function Band({
         </RigidBody>
       </group>
 
-      {/* Strap mesh */}
       <mesh ref={band}>
         <meshLineGeometry />
         <meshLineMaterial

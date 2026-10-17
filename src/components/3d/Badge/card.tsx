@@ -11,7 +11,6 @@ interface CardProps {
   onPointerUp: (e: any) => void
 }
 
-// Preload card model
 useGLTF.preload('/tag.glb')
 
 export default function Card({
@@ -23,7 +22,6 @@ export default function Card({
 }: CardProps) {
   const [texture, setTexture] = useState<THREE.CanvasTexture | null>(null)
   
-  // Tag geometry from model
   const { nodes, materials } = useGLTF('/tag.glb') as any
 
   useEffect(() => {
@@ -56,7 +54,7 @@ export default function Card({
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
     >
-      {/* Card mesh */}
+      {/* Card face first, then the metal pieces above it. */}
       <mesh geometry={nodes.card.geometry} renderOrder={2}>
         <meshPhysicalMaterial 
           map={texture} 
@@ -68,10 +66,8 @@ export default function Card({
         />
       </mesh>
 
-      {/* Clip ring */}
       <mesh geometry={nodes.clip.geometry} material={materials.metal} material-roughness={0.3} renderOrder={3} />
-      
-      {/* Clamp collar */}
+
       <mesh geometry={nodes.clamp.geometry} material={materials.metal} renderOrder={3} />
     </group>
   )

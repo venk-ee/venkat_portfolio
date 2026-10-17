@@ -18,6 +18,7 @@
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
 }
 
+/* Swipes over the badge canvas still scroll the page. */
 .badge-container canvas {
   touch-action: pan-y !important;
 }

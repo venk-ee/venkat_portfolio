@@ -8,7 +8,8 @@ function App() {
     <main id="top" className="min-h-screen bg-bg text-cream">
       <Header />
 
-      {/* Hero. */}
+      {/* Hero: badge canvas underneath, text on top. The pointer-events split
+          is what lets the badge be dragged from the empty space. */}
       <div className="relative min-h-screen w-full overflow-hidden bg-bg">
         <div className="absolute inset-0">
           <BadgeScene />
